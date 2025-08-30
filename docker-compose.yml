@@ -1,0 +1,59 @@
+version: '3.9'
+
+services:
+  app:
+    build:
+      context: ./docker/app
+      dockerfile: Dockerfile
+    container_name: space-app
+    volumes:
+      - ./src:/var/www/html
+    ports:
+      - "8080:80"
+    environment:
+      APACHE_DOCUMENT_ROOT: /var/www/html/public
+    depends_on:
+      - db
+      - redis
+    networks:
+      - space_net
+
+  db:
+    image: mysql:8.0
+    container_name: space-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: space
+      MYSQL_USER: space
+      MYSQL_PASSWORD: space
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "33060:3306"
+    networks:
+      - space_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: space-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - space_net
+
+  node:
+    image: node:20-alpine
+    container_name: space-node
+    working_dir: /var/www/html
+    volumes:
+      - ./src:/var/www/html
+    command: sh -c "npm ci && npm run dev"
+    networks:
+      - space_net
+
+volumes:
+  db_data:
+
+networks:
+  space_net:
