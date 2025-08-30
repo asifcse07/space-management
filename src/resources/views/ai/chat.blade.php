@@ -4,48 +4,91 @@
 @section('header', 'Space Management AI Assistant')
 
 @section('content')
-<div class="messages" id="messages"></div>
+<div class="chat-container" style="display:flex;flex-direction:column;height:80vh;max-width:700px;margin:30px auto;border-radius:16px;overflow:hidden;box-shadow:0 8px 25px rgba(0,0,0,0.2);font-family:sans-serif;background:#f7f9fc;">
+    
+    <!-- Chat Messages -->
+    <div id="messages" class="messages" style="flex:1;overflow-y:auto;padding:20px; display:flex; flex-direction:column; gap:10px;"></div>
 
-<form id="chat-form" style="display:flex;margin-top:10px;">
-    <input type="text" id="query" placeholder="Ask something about your buildings..." required style="flex:1;padding:10px;border-radius:6px;border:1px solid #ccc;">
-    <button type="submit" style="padding:10px 15px;margin-left:8px;border:none;background:#28a745;color:white;border-radius:6px;cursor:pointer;">Send</button>
-</form>
+    <!-- Typing indicator -->
+    <div id="typing" style="display:none;padding:10px 20px;font-size:14px;color:#555;">AI is typing...</div>
+
+    <!-- Chat Input -->
+    <form id="chat-form" style="display:flex;border-top:1px solid #ddd;background:#fff;">
+        <input type="text" id="query" placeholder="Ask about buildings, floors, or areas..." required
+               style="flex:1;padding:14px 16px;border:none;outline:none;font-size:16px;">
+        <button type="submit"
+                style="padding:14px 20px;border:none;background:linear-gradient(90deg,#28a745,#1e7e34);color:white;font-weight:bold;cursor:pointer;transition:0.3s;">
+            Send
+        </button>
+    </form>
+</div>
 @endsection
 
 @section('scripts')
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
-    const form = document.getElementById('chat-form');
-    const queryInput = document.getElementById('query');
-    const messagesDiv = document.getElementById('messages');
+const form = document.getElementById('chat-form');
+const queryInput = document.getElementById('query');
+const messagesDiv = document.getElementById('messages');
+const typingDiv = document.getElementById('typing');
 
-    function appendMessage(text, sender) {
-        const msg = document.createElement('div');
-        msg.classList.add('msg', sender);
-        msg.style.margin='10px 0';
-        msg.style.padding='10px 15px';
-        msg.style.borderRadius='15px';
-        msg.style.maxWidth='70%';
-        msg.style.clear='both';
-        msg.style.background = sender === 'user' ? '#007bff' : '#f1f1f1';
-        msg.style.color = sender === 'user' ? 'white' : 'black';
-        msg.style.float = sender === 'user' ? 'right' : 'left';
-        msg.innerText = text;
-        messagesDiv.appendChild(msg);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
+function appendMessage(text, sender) {
+    const msgWrapper = document.createElement('div');
+    msgWrapper.style.display = 'flex';
+    msgWrapper.style.flexDirection = sender === 'user' ? 'row-reverse' : 'row';
+    msgWrapper.style.alignItems = 'flex-end';
+    msgWrapper.style.gap = '10px';
 
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        let query = queryInput.value.trim();
-        if (!query) return;
+    // Avatar
+    const avatar = document.createElement('div');
+    avatar.style.width = '32px';
+    avatar.style.height = '32px';
+    avatar.style.borderRadius = '50%';
+    avatar.style.background = sender === 'user' ? '#007bff' : '#555';
+    avatar.style.display = 'flex';
+    avatar.style.justifyContent = 'center';
+    avatar.style.alignItems = 'center';
+    avatar.style.color = 'white';
+    avatar.style.fontWeight = 'bold';
+    avatar.innerText = sender === 'user' ? 'U' : 'AI';
 
-        appendMessage(query, 'user');
-        queryInput.value = '';
+    // Message bubble
+    const msg = document.createElement('div');
+    msg.style.padding = '12px 18px';
+    msg.style.borderRadius = '20px';
+    msg.style.maxWidth = '70%';
+    msg.style.wordWrap = 'break-word';
+    msg.style.fontSize = '15px';
+    msg.style.lineHeight = '1.4';
+    msg.style.background = sender === 'user' ? 'linear-gradient(135deg, #007bff, #0056b3)' : 'linear-gradient(135deg,#f1f1f1,#dcdcdc)';
+    msg.style.color = sender === 'user' ? 'white' : '#333';
+    msg.style.position = 'relative';
+    msg.innerText = text;
 
-        axios.post('/ai/chat', { query: query })
-            .then(res => appendMessage(res.data.answer, 'ai'))
-            .catch(err => appendMessage('Error: ' + err, 'ai'));
-    });
+    msgWrapper.appendChild(avatar);
+    msgWrapper.appendChild(msg);
+    messagesDiv.appendChild(msgWrapper);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    let query = queryInput.value.trim();
+    if (!query) return;
+
+    appendMessage(query, 'user');
+    queryInput.value = '';
+    typingDiv.style.display = 'block';
+
+    axios.post('/ai/chat', { query: query })
+        .then(res => {
+            typingDiv.style.display = 'none';
+            appendMessage(res.data.answer, 'ai');
+        })
+        .catch(err => {
+            typingDiv.style.display = 'none';
+            appendMessage('Error: ' + err, 'ai');
+        });
+});
 </script>
 @endsection
